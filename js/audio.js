@@ -466,15 +466,50 @@ registerProcessor('bb-crusher',BBCrusher);`;
   };
 
   /* ---------- Initialisierung ---------- */
+  /* MUSS synchron im Klick-Handler laufen (iOS/Safari) */
+  A.unlock = function () {
+    if (!A.ctx) A.ctx = new (window.AudioContext || window.webkitAudioContext)({ latencyHint: 'interactive' });
+    const ctx = A.ctx;
+    try { if (navigator.audioSession) navigator.audioSession.type = 'playback'; } catch (e) { /* */ }
+    try { ctx.resume(); } catch (e) { /* */ }
+    try {
+      const b = ctx.createBuffer(1, 1, 22050), s = ctx.createBufferSource();
+      s.buffer = b; s.connect(ctx.destination); s.start(0);
+    } catch (e) { /* */ }
+    // iOS: stilles <audio>-Element schaltet die Audio-Session auf "Wiedergabe" (ignoriert Stummschalter)
+    try {
+      if (!A.silentEl) {
+        const el = A.silentEl = document.createElement('audio');
+        el.src = silentWav(); el.loop = true; el.setAttribute('playsinline', ''); el.preload = 'auto';
+        el.volume = 0.01;
+        document.body.appendChild(el);
+      }
+      const pr = A.silentEl.play(); if (pr && pr.catch) pr.catch(() => {});
+    } catch (e) { /* */ }
+    return ctx;
+  };
+
+  function silentWav() {
+    const sr = 8000, n = 2000, bytes = new Uint8Array(44 + n * 2), v = new DataView(bytes.buffer);
+    const ws = (o, t) => { for (let i = 0; i < t.length; i++) v.setUint8(o + i, t.charCodeAt(i)); };
+    ws(0, 'RIFF'); v.setUint32(4, 36 + n * 2, true); ws(8, 'WAVE'); ws(12, 'fmt ');
+    v.setUint32(16, 16, true); v.setUint16(20, 1, true); v.setUint16(22, 1, true); v.setUint32(24, sr, true);
+    v.setUint32(28, sr * 2, true); v.setUint16(32, 2, true); v.setUint16(34, 16, true); ws(36, 'data'); v.setUint32(40, n * 2, true);
+    let bin = ''; for (let i = 0; i < bytes.length; i++) bin += String.fromCharCode(bytes[i]);
+    return 'data:audio/wav;base64,' + btoa(bin);
+  }
+
   A.init = async function () {
-    const ctx = A.ctx = new (window.AudioContext || window.webkitAudioContext)({ latencyHint: 'interactive' });
+    const ctx = A.unlock();
     const len = ctx.sampleRate * 2;
     A.noise = ctx.createBuffer(1, len, ctx.sampleRate);
     const nd = A.noise.getChannelData(0); for (let i = 0; i < len; i++) nd[i] = Math.random() * 2 - 1;
     A.irLong = makeIR(ctx, 2.6, 3);
     try {
       const url = URL.createObjectURL(new Blob([WORKLET], { type: 'application/javascript' }));
-      await ctx.audioWorklet.addModule(url); A.hasWorklet = true;
+      if (!ctx.audioWorklet) throw new Error('no worklet');
+      await Promise.race([ctx.audioWorklet.addModule(url), new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), 1500))]);
+      A.hasWorklet = true;
     } catch (e) { A.hasWorklet = false; }
 
     A.bus = ctx.createGain();
@@ -491,6 +526,22 @@ registerProcessor('bb-crusher',BBCrusher);`;
     A.applyAll();
     A.ready = true;
   };
+
+  /* Vorhören von Library-Presets über eine eigene Kette */
+  A.preview = function (params, midi, dur) {
+    if (!A.ready) return;
+    if (!A.prevChain) A.prevChain = new PartChain(A.ctx, A.bus);
+    const P = Object.assign(BB.defaultPart(params.engine), params);
+    A.prevChain.apply(P);
+    V.trigger(A.ctx, A.prevChain.input, P, A.ctx.currentTime + 0.01, midi, 0.95, dur || 0.4, { noise: A.noise }, null);
+  };
+  A.previewBuffer = function (buf) {
+    if (!A.ready || !buf) return;
+    if (A.prevSrc) { try { A.prevSrc.stop(); } catch (e) {} }
+    const s = A.prevSrc = A.ctx.createBufferSource(), g = A.ctx.createGain();
+    g.gain.value = 0.9; s.buffer = buf; s.connect(g); g.connect(A.bus); s.start();
+  };
+  A.stopPreview = function () { if (A.prevSrc) { try { A.prevSrc.stop(); } catch (e) {} A.prevSrc = null; } };
 
   A.applyAll = function () { if (!A.parts) return; BB.project.parts.forEach((p, i) => A.parts[i].apply(p)); };
   A.applyPart = function (i) { if (A.parts) A.parts[i].apply(BB.project.parts[i]); };

@@ -545,6 +545,7 @@
       o.addEventListener('pointerdown', (e) => { if (e.target === o) UI.close(o); });
       $$('[data-close]', o).forEach((b) => b.addEventListener('click', () => UI.close(o)));
     });
+    $('#openLibrary').addEventListener('click', () => UI.open('libraryOverlay'));
     $('#openPiano').addEventListener('click', () => UI.open('pianoOverlay'));
     $('#openSampler').addEventListener('click', () => UI.open('samplerOverlay'));
     $('#openMixer').addEventListener('click', () => UI.open('mixerOverlay'));
