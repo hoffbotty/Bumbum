@@ -551,8 +551,22 @@
     $('#openMixer').addEventListener('click', () => UI.open('mixerOverlay'));
     $('#openProject').addEventListener('click', () => UI.open('projectOverlay'));
     $('#openHelp').addEventListener('click', () => UI.open('helpOverlay'));
+    $('#iosBtn').addEventListener('click', () => {
+      const A = BB.Audio; if (!A.ready) return;
+      A.setMediaRoute(!A.mediaRoute);
+      try { localStorage.setItem('bb-mediaroute', A.mediaRoute ? '1' : '0'); } catch (e) { /* */ }
+      UI.renderMuteBtn();
+      UI.toast(A.mediaRoute ? 'Ton über Medien-Ausgabe (trotz Stummschalter)' : 'Normale Audio-Ausgabe');
+      A.preview({ engine: 'KICK', decay: 0.3, level: 0.6 }, 60, 0.2);
+    });
     $('#metroBtn').addEventListener('click', () => { BB.Metro.on = !BB.Metro.on; $('#metroBtn').classList.toggle('on', BB.Metro.on); });
   }
+  UI.renderMuteBtn = function () {
+    const b = $('#iosBtn'), A = BB.Audio;
+    b.hidden = !(A.isIOS || A.mediaRoute);
+    b.classList.toggle('on', !!A.mediaRoute);
+    b.textContent = A.mediaRoute ? '🔊 Stumm-Umgehung AN' : '🔕 Stumm-Umgehung';
+  };
   UI.chips = function (box, cur, onPick) {
     box.innerHTML = '';
     BB.project.parts.forEach((p, i) => {

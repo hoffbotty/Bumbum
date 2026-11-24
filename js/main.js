@@ -42,6 +42,9 @@
       if (BB.Audio.ctx.state !== 'running') BB.Audio.ctx.resume().catch(() => {});
       await restoreSamples();
       document.getElementById('startOverlay').hidden = true;
+      let pref = null; try { pref = localStorage.getItem('bb-mediaroute'); } catch (e) { /* */ }
+      if (BB.Audio.isIOS && pref !== '0') BB.Audio.setMediaRoute(true);
+      BB.UI.renderMuteBtn();
       BB.UI.flash('BUMBUM', `READY ${BB.project.bpm.toFixed(1)}`, 1600);
       BB.Audio.preview({ engine: 'KICK', decay: 0.3, level: 0.6 }, 60, 0.2);
       setTimeout(() => {
@@ -63,6 +66,7 @@
     const wake = () => {
       const A = BB.Audio;
       if (A.ctx && A.ctx.state !== 'running') A.unlock();
+      if (A.ready) A.ensureMediaRoute();
     };
     document.addEventListener('pointerdown', wake, true);
     document.addEventListener('keydown', wake, true);

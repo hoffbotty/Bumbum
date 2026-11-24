@@ -527,6 +527,33 @@ registerProcessor('bb-crusher',BBCrusher);`;
     A.ready = true;
   };
 
+  /* iOS: Ausgabe über ein <audio>-Element (Medienwiedergabe ignoriert den Stummschalter) */
+  A.isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  A.mediaRoute = false;
+  A.setMediaRoute = function (on) {
+    if (!A.ready) return;
+    const ctx = A.ctx;
+    if (!A.mediaDest) A.mediaDest = ctx.createMediaStreamDestination();
+    if (!A.routeEl) {
+      const el = A.routeEl = document.createElement('audio');
+      el.setAttribute('playsinline', ''); el.setAttribute('x-webkit-airplay', 'deny'); el.autoplay = true;
+      document.body.appendChild(el);
+    }
+    try { A.analyser.disconnect(); } catch (e) { /* */ }
+    if (on) {
+      A.analyser.connect(A.mediaDest);
+      if (A.routeEl.srcObject !== A.mediaDest.stream) A.routeEl.srcObject = A.mediaDest.stream;
+      const pr = A.routeEl.play(); if (pr && pr.catch) pr.catch(() => {});
+    } else {
+      A.analyser.connect(ctx.destination);
+      A.routeEl.pause();
+    }
+    A.mediaRoute = on;
+  };
+  A.ensureMediaRoute = function () {
+    if (A.mediaRoute && A.routeEl && A.routeEl.paused) { const pr = A.routeEl.play(); if (pr && pr.catch) pr.catch(() => {}); }
+  };
+
   /* Vorhören von Library-Presets über eine eigene Kette */
   A.preview = function (params, midi, dur) {
     if (!A.ready) return;
