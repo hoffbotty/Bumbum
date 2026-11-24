@@ -60,6 +60,7 @@
     BB.UI.build();
     BB.PianoRoll.init();
     BB.Sampler.init();
+    BB.Synth.init();
     BB.Library.init();
     document.getElementById('startBtn').addEventListener('click', start, { once: false });
     // Bei jeder Berührung prüfen, ob Audio läuft (iOS unterbricht gern)

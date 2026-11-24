@@ -10,7 +10,7 @@ window.BB = window.BB || {};
   BB.pad3 = (n) => String(n).padStart(3, '0');
 
   BB.ENGINES = ['KICK', 'SNARE', 'CLAP', 'HH CL', 'HH OP', 'TOM', 'RIM', 'NOISE',
-    'SAW', 'SQUARE', 'TRI', 'SINE', 'SUPERSAW', 'FM', 'CHORD', 'SAMPLE'];
+    'SAW', 'SQUARE', 'TRI', 'SINE', 'SUPERSAW', 'FM', 'CHORD', 'SYNTH', 'SAMPLE'];
   BB.DRUMS = ['KICK', 'SNARE', 'CLAP', 'HH CL', 'HH OP', 'TOM', 'RIM'];
   BB.isDrum = (e) => BB.DRUMS.includes(e);
   BB.isSynth = (e) => !BB.isDrum(e) && e !== 'SAMPLE';
@@ -44,6 +44,26 @@ window.BB = window.BB || {};
     }
   };
 
+  /* Bass-Synth-Modul: alle Werte 0..1 außer wo angegeben */
+  BB.defaultSyn = () => ({
+    o1: { wave: 'saw', oct: 0, semi: 0, fine: 0, level: 0.8, pw: 0.5 },
+    o2: { wave: 'square', oct: -1, semi: 0, fine: 6, level: 0.45, pw: 0.5 },
+    sub: { wave: 'sine', level: 0.35 }, noise: 0, unison: 1, detune: 0.25,
+    flt: { type: 'lowpass', slope: 24, cutoff: 0.35, reso: 0.35, env: 0.45, key: 0.3, drive: 0.15 },
+    fenv: { a: 0.02, d: 0.35, s: 0.25, r: 0.25 },
+    aenv: { a: 0.02, d: 0.4, s: 0.75, r: 0.2 },
+    lfo: { wave: 'sine', rate: 0.4, depth: 0, target: 'cutoff', sync: false },
+    glide: 0, mono: true, vel: 0.5,
+  });
+  BB.SYN_MAP = { cutoff: ['flt', 'cutoff'], reso: ['flt', 'reso'], egInt: ['flt', 'env'], attack: ['aenv', 'a'], decay: ['aenv', 'd'] };
+  BB.getParam = (p, id) => { const m = p.engine === 'SYNTH' && BB.SYN_MAP[id]; return m ? p.syn[m[0]][m[1]] : p[id]; };
+  BB.setParam = (p, id, v) => { const m = p.engine === 'SYNTH' && BB.SYN_MAP[id]; if (m) p.syn[m[0]][m[1]] = v; else p[id] = v; };
+  BB.mergeSyn = (s) => {
+    const d = BB.defaultSyn(); s = s || {};
+    Object.keys(d).forEach((k) => { if (d[k] && typeof d[k] === 'object') d[k] = Object.assign(d[k], s[k] || {}); else if (s[k] != null) d[k] = s[k]; });
+    return d;
+  };
+
   BB.defaultSampleMeta = () => ({
     name: '', bars: 1, div: 0, slices: [], start: 0, end: 1,
     reverse: false, stretch: false, stretchMode: 'sync', ratio: 1,
@@ -53,7 +73,8 @@ window.BB = window.BB || {};
     const p = {
       engine, pitch: 0, cutoff: 1, reso: 0.1, egInt: 0, level: 0.8, pan: 0,
       attack: 0, decay: 0.4, ifx: 0, ifxType: 'OFF', mute: false, solo: false,
-      keyBase: BB.isSynth(engine) ? 48 : 60, notes: [], sample: BB.defaultSampleMeta(),
+      keyBase: engine === 'SYNTH' ? 36 : BB.isSynth(engine) ? 48 : 60, notes: [], sample: BB.defaultSampleMeta(),
+      syn: BB.defaultSyn(),
     };
     return Object.assign(p, extra || {});
   };
@@ -78,7 +99,9 @@ window.BB = window.BB || {};
     for (let s = 2; s < 16; s += 4) oh.notes.push(N(s, 60));
     parts.push(oh);
 
-    const bass = BB.defaultPart('SAW', { cutoff: 0.38, reso: 0.55, egInt: 0.45, decay: 0.22, level: 0.7, ifxType: 'DRIVE', ifx: 0.2 });
+    const bass = BB.Synth
+      ? BB.defaultPart('SYNTH', { level: 0.7, keyBase: 36, synName: 'Tekk Rolling', syn: BB.mergeSyn(JSON.parse(JSON.stringify(BB.Synth.presetByName['Tekk Rolling']))) })
+      : BB.defaultPart('SAW', { cutoff: 0.38, reso: 0.55, egInt: 0.45, decay: 0.22, level: 0.7, ifxType: 'DRIVE', ifx: 0.2 });
     [1, 2, 3, 5, 6, 7, 9, 10, 11, 13, 14, 15].forEach((s) => bass.notes.push(N(s, s === 14 || s === 15 ? 39 : 36, s % 2 ? 0.8 : 1)));
     parts.push(bass);
 
@@ -112,6 +135,7 @@ window.BB = window.BB || {};
       const base = BB.defaultPart(x && x.engine ? x.engine : d.parts[i].engine);
       const r = Object.assign(base, x || {});
       r.sample = Object.assign(BB.defaultSampleMeta(), r.sample || {});
+      r.syn = BB.mergeSyn(x && x.syn);
       r.notes = (r.notes || []).filter((n) => n && n.s >= 0).map((n) => N(n.s | 0, n.p | 0, n.v, Math.max(1, n.l | 0)));
       return r;
     });

@@ -261,17 +261,18 @@
 
   const CATS = [
     ['KITS', 'Kits'], ['KICKS', 'Kicks'], ['SNARES', 'Snares'], ['CLAPS', 'Claps'], ['HATS', 'Hats'], ['PERC', 'Perc'],
-    ['BASS', 'Bass'], ['LEADS', 'Leads'], ['CHORDS', 'Chords'], ['PADS', 'Pads'], ['SYNTH_FX', 'Synth FX'],
+    ['SYNTH_BASS', 'Bass Synth'], ['BASS', 'Bass'], ['LEADS', 'Leads'], ['CHORDS', 'Chords'], ['PADS', 'Pads'], ['SYNTH_FX', 'Synth FX'],
     ['VOCALS', 'Vocals'], ['HITS', 'Hits'], ['FX', 'FX'], ['LOOPS', 'Loops'],
   ];
 
   function itemsFor(cat) {
     if (cat === 'KITS') return KITS.map((k) => ({ kind: 'kit', n: k.n, k }));
+    if (cat === 'SYNTH_BASS') return BB.Synth.PRESETS.slice(1).map(([n, sy]) => ({ kind: 'synth', n, sy }));
     if (PRESETS[cat]) return PRESETS[cat].map(([n, p]) => ({ kind: 'preset', n, p }));
     return SAMPLES.filter((s) => s.cat === cat).map((s) => ({ kind: 'sample', n: s.n, s }));
   }
 
-  L.count = () => Object.values(PRESETS).reduce((a, l) => a + l.length, 0) + SAMPLES.length + KITS.length;
+  L.count = () => Object.values(PRESETS).reduce((a, l) => a + l.length, 0) + SAMPLES.length + KITS.length + BB.Synth.PRESETS.length - 1;
 
   /* Rendern */
   L.render = async function (rc) {
@@ -337,7 +338,14 @@
   }
 
   /* ---------- UI ---------- */
-  function open() { L.part = BB.UI.part; render(); }
+  const CAT_OF = { KICK: 'KICKS', SNARE: 'SNARES', RIM: 'SNARES', CLAP: 'CLAPS', 'HH CL': 'HATS', 'HH OP': 'HATS', TOM: 'PERC', NOISE: 'SYNTH_FX',
+    SAW: 'BASS', SQUARE: 'BASS', TRI: 'BASS', SINE: 'BASS', FM: 'LEADS', SUPERSAW: 'LEADS', CHORD: 'CHORDS', SYNTH: 'SYNTH_BASS', SAMPLE: 'LOOPS' };
+  function open() {
+    L.part = BB.UI.part; L.sel = null;
+    L.cat = CAT_OF[BB.project.parts[L.part].engine] || 'KITS';
+    render();
+    const on = $('#libCats .on'); if (on && on.scrollIntoView) on.scrollIntoView({ block: 'nearest', inline: 'center' });
+  }
 
   function render() {
     BB.UI.chips($('#libParts'), L.part, (i) => { L.part = i; render(); });
@@ -356,7 +364,7 @@
       if (it.kind === 'kit') {
         b.innerHTML = `<b>${it.n}</b><small>${it.k.sounds.join(' · ')}</small>`;
       } else {
-        const tag = it.kind === 'preset' ? it.p.engine : (it.s.bars ? `LOOP ${it.s.bpm} BPM` : 'SAMPLE');
+        const tag = it.kind === 'synth' ? `BASS SYNTH · ${it.sy.o1.wave.toUpperCase()}${it.sy.o2.level > 0.01 ? '+' + it.sy.o2.wave.toUpperCase() : ''}` : it.kind === 'preset' ? it.p.engine : (it.s.bars ? `LOOP ${it.s.bpm} BPM` : 'SAMPLE');
         b.innerHTML = `<b>${it.n}</b><small>${tag}${it.p && it.p.ifxType ? ' + ' + it.p.ifxType : ''}</small>`;
       }
       b.addEventListener('click', () => { L.sel = it; $$('.lib-tile', grid).forEach((x) => x.classList.toggle('sel', x === b)); preview(it, b); renderBar(); });
@@ -378,7 +386,9 @@
 
   async function preview(it, el) {
     if (!BB.Audio.ready) return;
-    if (it.kind === 'preset') {
+    if (it.kind === 'synth') {
+      BB.Audio.preview({ engine: 'SYNTH', syn: it.sy, keyBase: 36 }, 36, 0.6);
+    } else if (it.kind === 'preset') {
       const syn = BB.isSynth(it.p.engine);
       BB.Audio.preview(it.p, syn ? (it.p.keyBase || 48) + 12 : 60, syn ? 0.5 : 0.3);
     } else if (it.kind === 'sample') {
@@ -403,7 +413,8 @@
 
   async function load(it) {
     if (!it) return;
-    if (it.kind === 'preset') { L.applyPreset(L.part, it.p); BB.UI.toast(`${it.n} → Spur ${L.part + 1}`); }
+    if (it.kind === 'synth') { BB.Synth.applyPreset(L.part, it.sy, it.n); BB.UI.toast(`${it.n} → Spur ${L.part + 1} (im SYNTH editierbar)`); }
+    else if (it.kind === 'preset') { L.applyPreset(L.part, it.p); BB.UI.toast(`${it.n} → Spur ${L.part + 1}`); }
     else if (it.kind === 'sample') {
       $('#libLoad').textContent = 'lade …';
       await L.applySample(L.part, it.s);

@@ -305,6 +305,7 @@ registerProcessor('bb-crusher',BBCrusher);`;
    */
   V.trigger = function (ctx, dest, P, t, midi, vel, dur, res, S, hooks) {
     const eng = P.engine;
+    if (eng === 'SYNTH') return BB.SynthVoice(ctx, dest, P, t, midi, vel, dur, res, hooks && hooks.part != null ? hooks.part : null);
     const semis = P.pitch + (midi - 60);
     const r = Math.pow(2, semis / 12);
     const atk = 0.0008 + P.attack * P.attack * 1.5;
@@ -559,6 +560,7 @@ registerProcessor('bb-crusher',BBCrusher);`;
     if (!A.ready) return;
     if (!A.prevChain) A.prevChain = new PartChain(A.ctx, A.bus);
     const P = Object.assign(BB.defaultPart(params.engine), params);
+    if (params.syn) P.syn = BB.mergeSyn(params.syn);
     A.prevChain.apply(P);
     V.trigger(A.ctx, A.prevChain.input, P, A.ctx.currentTime + 0.01, midi, 0.95, dur || 0.4, { noise: A.noise }, null);
   };

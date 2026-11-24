@@ -136,16 +136,17 @@
           if (d.id === 'engine') {
             const eng = BB.ENGINES[v];
             p.engine = eng;
+            if (eng === 'SYNTH' && (p.keyBase === 60 || p.keyBase === 48)) p.keyBase = 36;
             if (BB.isSynth(eng) && p.keyBase === 60) p.keyBase = 48;
             if (!BB.isSynth(eng) && p.keyBase === 48) p.keyBase = 60;
             UI.renderParts(); UI.renderPads();
-          } else p[d.id] = v;
+          } else BB.setParam(p, d.id, v);
           BB.Audio.applyPart(UI.part);
           UI.flash(d.id === 'ifx' ? `IFX: ${p.ifxType}` : `${UI.part + 1}:${d.label}`, BB.formatParam(d.id, v, p));
           BB.save();
           BB.emit('param', UI.part);
         },
-        onStart: () => UI.flash(`${UI.part + 1}:${d.label}`, BB.formatParam(d.id, d.id === 'engine' ? BB.ENGINES.indexOf(UI.curPart().engine) : UI.curPart()[d.id], UI.curPart())),
+        onStart: () => UI.flash(`${UI.part + 1}:${d.label}`, BB.formatParam(d.id, d.id === 'engine' ? BB.ENGINES.indexOf(UI.curPart().engine) : BB.getParam(UI.curPart(), d.id), UI.curPart())),
         onEnd: (moved) => {
           if (!moved && d.id === 'engine' && !BB.Seq.playing) UI.audition(UI.part);
         },
@@ -156,17 +157,20 @@
   }
   UI.refreshKnobs = function () {
     const p = UI.curPart();
-    UI.knobs.forEach((k) => k.set(k.id === 'engine' ? BB.ENGINES.indexOf(p.engine) : p[k.id]));
+    UI.knobs.forEach((k) => k.set(k.id === 'engine' ? BB.ENGINES.indexOf(p.engine) : BB.getParam(p, k.id)));
   };
 
   /* ---------- Funktionstasten + VALUE ---------- */
-  const FNS = [['TEMPO', 'TEMPO'], ['SWING', 'SWING'], ['LENGTH', 'LENGTH'], ['IFX', 'IFX'], ['PADFX', 'PAD FX'], ['MUTE', 'MUTE']];
+  const FNS = [['SOUND', 'SOUND'], ['SYNTH', 'SYNTH'], ['TEMPO', 'TEMPO'], ['SWING', 'SWING'], ['LENGTH', 'LENGTH'], ['IFX', 'IFX'], ['PADFX', 'PAD FX'], ['MUTE', 'MUTE']];
   function buildFn() {
     const row = $('#fnrow');
     FNS.forEach(([id, label]) => {
       const b = document.createElement('button');
       b.className = 'sbtn'; b.dataset.fn = id; b.innerHTML = `${label}<i class="led"></i>`;
+      if (id === 'SOUND' || id === 'SYNTH') b.classList.add('hot');
       b.addEventListener('click', () => {
+        if (id === 'SOUND') { UI.open('libraryOverlay'); return; }
+        if (id === 'SYNTH') { UI.open('synthOverlay'); return; }
         if (id === 'MUTE') { UI.muteMode = !UI.muteMode; UI.fn = UI.muteMode ? 'MUTE' : 'TEMPO'; }
         else {
           if (id === 'TEMPO' && UI.fn === 'TEMPO') tapTempo();
@@ -176,6 +180,7 @@
       });
       row.appendChild(b);
     });
+    $('#lcd').addEventListener('click', () => UI.open('libraryOverlay'));
     UI.valueKnob = new Knob($('#valueKnob'), { endless: true, onDelta: valueDelta });
   }
   function tapTempo() {
@@ -547,6 +552,7 @@
     });
     $('#openLibrary').addEventListener('click', () => UI.open('libraryOverlay'));
     $('#openPiano').addEventListener('click', () => UI.open('pianoOverlay'));
+    $('#openSynth').addEventListener('click', () => UI.open('synthOverlay'));
     $('#openSampler').addEventListener('click', () => UI.open('samplerOverlay'));
     $('#openMixer').addEventListener('click', () => UI.open('mixerOverlay'));
     $('#openProject').addEventListener('click', () => UI.open('projectOverlay'));
