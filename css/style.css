@@ -329,3 +329,9 @@ select { background: #1d0e15; color: #f0d6e3; border: 1px solid #44202f; border-
   .lib-tile.kit { grid-column: span 2; }
   .sy-keys { height: 58px; }
 }
+
+.frame-hint { background: #3a1626; border: 1px solid var(--pink); color: #ffd6e8; border-radius: 10px; padding: 10px 12px; font-size: 13px; text-align: left; font-weight: 600; }
+.panel.notice { max-width: 520px; height: auto !important; font-size: 14px; line-height: 1.5; color: #e6d5de; }
+.panel.notice p { margin: 0; }
+.panel.notice b { color: var(--pink-hi); }
+.sp-screen.drop { box-shadow: 0 0 0 2px var(--pink), inset 0 2px 8px rgba(0,0,0,.8); }

@@ -146,7 +146,7 @@
   async function toggleRec() {
     const btn = $('#spRec');
     if (SP.recorder) { SP.recorder.stop(); return; }
-    if (!navigator.mediaDevices || !window.MediaRecorder) { BB.UI.toast('Aufnahme nicht unterstützt'); return; }
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia || !window.MediaRecorder) { BB.UI.blocked('Mikrofon'); return; }
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false } });
       const chunks = [];
@@ -162,7 +162,10 @@
       };
       rec.start();
       btn.classList.add('on'); btn.textContent = '■ Stop';
-    } catch (e) { BB.UI.toast('Kein Mikrofonzugriff'); }
+    } catch (e) {
+      if (e && e.name === 'NotAllowedError' && !BB.inFrame) BB.UI.toast('Mikrofon verweigert – erlaube es in den Browser-Einstellungen', 4000);
+      else BB.UI.blocked('Mikrofon');
+    }
   }
 
   function trimSilence(buf) {
@@ -212,10 +215,21 @@
         $('#spInfo').textContent = 'LADE …';
         const buf = await BB.Audio.ctx.decodeAudioData(await f.arrayBuffer());
         await setRaw(buf, f.name.replace(/\.[^.]+$/, ''));
-      } catch (er) { BB.UI.toast('Datei konnte nicht gelesen werden'); }
+      } catch (er) { BB.UI.toast('Format nicht lesbar – nutze WAV, MP3, M4A/AAC, AIFF oder FLAC', 4500); }
       e.target.value = '';
     });
     $('#spRec').addEventListener('click', toggleRec);
+    const scr = $('.sp-screen');
+    scr.addEventListener('dragover', (e) => { e.preventDefault(); scr.classList.add('drop'); });
+    scr.addEventListener('dragleave', () => scr.classList.remove('drop'));
+    scr.addEventListener('drop', async (e) => {
+      e.preventDefault(); scr.classList.remove('drop');
+      const f = e.dataTransfer && e.dataTransfer.files[0]; if (!f || !BB.Audio.ready) return;
+      try { const buf = await BB.Audio.ctx.decodeAudioData(await f.arrayBuffer()); await setRaw(buf, f.name.replace(/\.[^.]+$/, '')); }
+      catch (er) { BB.UI.toast('Format nicht lesbar – nutze WAV, MP3, M4A/AAC, AIFF oder FLAC', 4500); }
+    });
+    if (BB.inFrame) $('#spFrameHint').hidden = false;
+    $('#spFrameHint').addEventListener('click', () => BB.UI.blocked('Mikrofon und Dateien'));
     $('#spDemo').addEventListener('click', async () => {
       $('#spInfo').textContent = 'RENDERE …';
       const buf = BB.Audio.demoLoop || (BB.Audio.demoLoop = await BB.Audio.renderDemoLoop());

@@ -2,6 +2,8 @@
 /* BUMBUM – Kern: Konstanten, Datenmodell, Speicher */
 window.BB = window.BB || {};
 (function (BB) {
+  BB.WEB_URL = 'https://hoffbotty.github.io/Bumbum/';
+  BB.inFrame = (() => { try { return window.top !== window.self; } catch (e) { return true; } })();
   BB.clamp = (v, a, b) => Math.min(b, Math.max(a, v));
   BB.mtof = (m) => 440 * Math.pow(2, (m - 69) / 12);
   BB.NOTE_NAMES = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];

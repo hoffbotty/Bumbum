@@ -25,6 +25,12 @@
     UI._toastT = setTimeout(() => { t.hidden = true; }, ms || 1800);
   };
 
+  /* Hinweis, wenn die Vorschau (Claude-App) Mikrofon/Dateien sperrt */
+  UI.blocked = function (what) {
+    $('#blockWhat').textContent = what;
+    UI.open('noticeOverlay');
+  };
+
   UI.curPart = () => BB.project.parts[UI.part];
 
   UI.defaultPitch = function (i) {
@@ -564,6 +570,10 @@
       UI.renderMuteBtn();
       UI.toast(A.mediaRoute ? 'Ton über Medien-Ausgabe (trotz Stummschalter)' : 'Normale Audio-Ausgabe');
       A.preview({ engine: 'KICK', decay: 0.3, level: 0.6 }, 60, 0.2);
+    });
+    $('#noticeOpen').addEventListener('click', () => { window.open(BB.WEB_URL, '_blank', 'noopener'); });
+    $('#noticeCopy').addEventListener('click', async () => {
+      try { await navigator.clipboard.writeText(BB.WEB_URL); UI.toast('Link kopiert'); } catch (e) { UI.toast(BB.WEB_URL, 5000); }
     });
     $('#metroBtn').addEventListener('click', () => { BB.Metro.on = !BB.Metro.on; $('#metroBtn').classList.toggle('on', BB.Metro.on); });
   }

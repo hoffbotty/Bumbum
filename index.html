@@ -189,11 +189,12 @@
       <button class="x" data-close>✕</button>
     </div>
     <div class="ptools">
-      <label class="pbtn file">📂 Datei laden<input type="file" id="spFile" accept="audio/*" hidden></label>
+      <label class="pbtn file">📂 Datei laden<input type="file" id="spFile" accept="audio/*,.wav,.mp3,.m4a,.aac,.aif,.aiff,.flac,.ogg,.caf" hidden></label>
       <button class="pbtn" id="spRec">🎙 Aufnehmen</button>
       <button class="pbtn" id="spDemo">🥁 Demo-Loop</button>
       <span class="spname" id="spName">— kein Sample —</span>
     </div>
+    <button class="frame-hint" id="spFrameHint" hidden>⚠️ In der Claude-App-Vorschau sind Mikrofon und Datei-Auswahl gesperrt. Tippe hier für die Web-Version, in der beides geht.</button>
     <div class="sp-screen">
       <div class="sp-caption"><span>SAMPLE · TIME SLICE</span><span id="spInfo"></span></div>
       <canvas id="spWave"></canvas>
@@ -289,6 +290,19 @@
       <p><b>Piano Roll:</b> Noten zeichnen, verschieben, Länge am rechten Rand ziehen, Velocity unten. <b>Sampler:</b> Sample laden/aufnehmen, Time Slice, Timestretch auf BPM, Slices auf die Pads legen.</p>
       <p><b>Tastatur:</b> Leertaste Play/Stop · 1–8 Spur · Y S X D C V G B H N J M Noten · R Aufnahme · MIDI-Keyboards werden erkannt.</p>
     </div>
+  </div>
+</div>
+
+<div class="overlay" id="noticeOverlay" hidden>
+  <div class="panel notice">
+    <div class="phead"><span class="ptitle">ZUGRIFF GESPERRT</span><button class="x" data-close>✕</button></div>
+    <p><b id="blockWhat">Mikrofon</b> ist in dieser Vorschau nicht erlaubt. Die Claude-App zeigt BUMBUM in einer abgeschotteten Seite, die nicht aufs Mikrofon (und je nach Gerät nicht auf deine Dateien) zugreifen darf.</p>
+    <p>Öffne die <b>Web-Version</b> in Safari oder Chrome – dort funktionieren Mikrofon-Aufnahme, Datei-Import und „Zum Home-Bildschirm“ (dann wie eine echte App, auch offline).</p>
+    <div class="ptools">
+      <button class="pbtn hot" id="noticeOpen">🌐 Web-Version öffnen</button>
+      <button class="pbtn" id="noticeCopy">🔗 Link kopieren</button>
+    </div>
+    <p class="hint">Hinweis: Samples aus der Library (📚) funktionieren auch hier ohne Freigabe.</p>
   </div>
 </div>
 
